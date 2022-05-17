@@ -2,7 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"log"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -24,21 +25,6 @@ type LocationResponse struct {
 	Valid    [][]interface{} `json:"valid"`
 }
 
-func locationResponse(w http.ResponseWriter, r *http.Request) LocationResponse {
-	// Declare a new Person struct.
-	var location LocationResponse
-
-	// Try to decode the request body into the struct. If there is an error,
-	// respond to the client with the error message and a 400 status code.
-	err := json.NewDecoder(r.Body).Decode(&location)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Fatal()
-	}
-
-	return location
-}
-
 func locations() []Location {
 	var locations = []Location{
 		{"Rathaus", 1, 97},
@@ -58,4 +44,26 @@ func locations() []Location {
 	}
 
 	return locations
+}
+
+func parseLocationResponse(resp *http.Response, location Location, week int, secs float64) LocationResponse {
+	// Declare a new LocationResponse struct.
+	var requestResult LocationResponse
+
+	// Checking http status code.
+	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
+		fmt.Printf("fetched %s for week %d in %.2f successfully", location.Name, week, secs)
+	} else {
+		fmt.Printf("%d: Location %s could not be fetched for week %d", resp.StatusCode, location.Name, week)
+	}
+
+	// Error is not catched here.
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	// Map the body byte [] into requestResult.
+	if err := json.Unmarshal(body, &requestResult); err != nil {
+		fmt.Printf("Can not unmarshal JSON")
+	}
+
+	return requestResult
 }
